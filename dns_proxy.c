@@ -47,6 +47,7 @@ char *GROUPNAME = "nobody";
 int NUM_DNS = 0;
 int LOG = 0;
 char **dns_servers;
+int modifyResolv=1;
 
 typedef struct {
   char *buffer;
@@ -209,13 +210,15 @@ int udp_listener() {
   if(bind(sock, (struct sockaddr*)&dns_listener, sizeof(dns_listener)) < 0)
     error("[!] Error binding on dns proxy");
 
-  FILE *resolv = fopen("/etc/resolv.conf", "w");
+  if (modifyResolv){
+    FILE *resolv = fopen("/etc/resolv.conf", "w");
 
-  if (!resolv)
-    error("[!] Error opening /etc/resolv.conf");
+    if (!resolv)
+      error("[!] Error opening /etc/resolv.conf");
 
-  fprintf(resolv, "nameserver %s\n", LISTEN_ADDR);
-  fclose(resolv);
+    fprintf(resolv, "nameserver %s\n", LISTEN_ADDR);
+    fclose(resolv);
+  }
 
   if (strcmp(LOGFILE, "/dev/null") != 0) {
     LOG      = 1;
@@ -314,8 +317,8 @@ int main(int argc, char *argv[]) {
   }
 
   if (getuid() != 0) {
-    printf("Error: this program must be run as root! Quitting\n");
-    exit(1);
+    printf("Warning: not running as root - cannot bind default port and cannot modify resolv.conf\n");
+    modifyResolv=0;
   }
 
   printf("[*] Listening on: %s:%d\n", LISTEN_ADDR, LISTEN_PORT);
